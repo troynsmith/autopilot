@@ -1,10 +1,15 @@
 """Core functions."""
 
-from automol import Geometry
-from autostore import Calculation, Database, read, write
-from qcio import Structure
+from typing import TYPE_CHECKING
+
+from automol import Geometry, mol
+from autostore import Calculation, Database, fetch, read, write
+from autostore.calcn import calculation_hash
 
 from . import compute
+
+if TYPE_CHECKING:
+    from autostore.models import IdentityRow
 
 
 def energy(
@@ -46,9 +51,11 @@ def energy(
     return res.data.energy
 
 
-def stationary_point(geo: Geometry, calc: Calculation, *, db: Database) -> Structure:
+def initial_geometry(
+    geo: Geometry, calc: Calculation, *, db: Database, order: int
+) -> Geometry:
     """
-    Compute stationary point structure.
+    Compute stationary point initial geometry.
 
     Parameters
     ----------
@@ -58,24 +65,39 @@ def stationary_point(geo: Geometry, calc: Calculation, *, db: Database) -> Struc
         Calculation metadata.
     db
         Database connection manager.
-    hash_name
-        Calculation hash type.
+    order
+        Order of the stationary point.
 
     Returns
     -------
-        Final structure.
+        Initial geometry.
 
     Raises
     ------
     RuntimeError
         If the calculation fails.
     """
+    geo_mol = geo.to_mol()
+    inchi_str = mol.inchi(geo_mol)
+
+    calc_hash = calculation_hash(calc)
+
+    existing_identity: IdentityRow | None = fetch.identity(
+        algorithm="InChI", identifier=inchi_str, db=db
+    )
+
+    if existing_identity:
+        for stp in existing_identity.stationary_points:
+            for hash_row in stp.calculation.hashes:
+                if hash_row.value == calc_hash:
+                    return stp.geometry.to_geom()
+
     res = compute.stationary_point(geo, calc)
 
     if not res.success or res.data.final_structure is None:  # ty:ignore[unresolved-attribute]
         msg = f"Calculation failed: {res.traceback}"
         raise RuntimeError(msg)
 
-    write.stationary_point(res, db)
+    stp = write.stationary_point(res, db, order=order)
 
-    return res.data.final_structure  # ty:ignore[unresolved-attribute]
+    return stp.geometry.to_geom()

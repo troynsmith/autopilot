@@ -3,6 +3,6 @@
 __version__ = "0.0.0"
 
 from . import compute
-from .core import energy, stationary_point
+from .core import energy, initial_geometry
 
-__all__ = ["compute", "energy", "stationary_point"]
+__all__ = ["compute", "energy", "initial_geometry"]
