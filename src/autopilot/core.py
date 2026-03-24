@@ -1,5 +1,6 @@
 """Core functions."""
 
+
 from typing import TYPE_CHECKING
 
 from automol import Geometry, mol
