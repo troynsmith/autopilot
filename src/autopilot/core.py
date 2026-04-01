@@ -1,21 +1,65 @@
 """Core functions."""
 
-
-from typing import TYPE_CHECKING
-
-from automol import Geometry, mol
-from autostore import Calculation, Database, fetch, read, write
+import autostore
+import qcop
+from automol import Geometry, geom
+from autostore import (
+    Calculation,
+    Database,
+    EnergyRow,
+    fetch,
+    write,
+)
 from autostore.calcn import calculation_hash
+from autostore.models import StationaryPointRow
+from autostore.qc import program, structure
+from qcio import CalcType
 
-from . import compute
 
-if TYPE_CHECKING:
-    from autostore.models import IdentityRow
+def conformer_search(
+    calc: Calculation, geo: Geometry, *, hash_name: str = "minimal", db: Database
+) -> None:
+    """
+    Conduct conformer search for given geometry.
+
+    Parameters
+    ----------
+    geo
+        Geometry.
+    calc
+        Calculation metadata.
+    hash_name
+        Calculation hash type.
+    db
+        Database connection manager.
+
+    Returns
+    -------
+        test
+
+    Raises
+    ------
+    RuntimeError
+        If the calculation fails.
+    """
+    inp = program.prog_from_rows(calc, geo, CalcType.conformer_search)
+    res = qcop.compute(calc.program, inp)
+
+    calc_row, _ = autostore.qc.results.res_to_rows(res)
+
+    for struc, ene in zip(
+        res.data.conformers, res.data.conformer_energies, strict=True
+    ):
+        geo_row = structure.struc_to_row(struc)
+        ene_row = write.energy(ene, calc_row=calc_row, geo_row=geo_row, db=db)
+        write.stationary_point(
+            1, ene_row=ene_row, calc_row=calc_row, geo_row=geo_row, db=db
+        )
 
 
 def energy(
-    geo: Geometry, calc: Calculation, *, db: Database, hash_name: str = "minimal"
-) -> float:
+    calc: Calculation, geo: Geometry, *, hash_name: str = "minimal", db: Database
+) -> EnergyRow:
     """
     Compute energy.
 
@@ -25,10 +69,10 @@ def energy(
         Geometry.
     calc
         Calculation metadata.
-    db
-        Database connection manager.
     hash_name
         Calculation hash type.
+    db
+        Database connection manager.
 
     Returns
     -------
@@ -39,22 +83,31 @@ def energy(
     RuntimeError
         If the calculation fails.
     """
-    ene = read.energy(geo, calc, db=db, hash_name=hash_name)
-    if ene is not None:
-        return ene
+    ene_row = fetch.energy(geo, calc, db=db, hash_name=hash_name)
+    if ene_row is not None:
+        return ene_row
 
-    res = compute.energy(geo, calc)
+    inp = program.prog_from_rows(calc, geo, CalcType.energy)
+    res = qcop.compute(calc.program, inp)
+
     if not res.success or res.data.energy is None:
         msg = f"Calculation failed: {res.traceback}"
         raise RuntimeError(msg)
 
-    write.energy(res, db)
-    return res.data.energy
+    calc_row, geo_row = autostore.qc.results.res_to_rows(res)
+    val = res.data.energy
+
+    return write.energy(val, calc_row=calc_row, geo_row=geo_row, db=db)
 
 
-def initial_geometry(
-    geo: Geometry, calc: Calculation, *, db: Database, order: int
-) -> Geometry:
+def init_geom(
+    calc: Calculation,
+    geo: Geometry,
+    order: int,
+    *,
+    hash_name: str = "minimal",
+    db: Database,
+) -> StationaryPointRow:
     """
     Compute stationary point initial geometry.
 
@@ -78,27 +131,24 @@ def initial_geometry(
     RuntimeError
         If the calculation fails.
     """
-    geo_mol = geo.to_mol()
-    inchi_str = mol.inchi(geo_mol)
+    inchi = geom.geo_to_inchi(geo)
+    calc_hash = calculation_hash(calc, hash_name)
 
-    calc_hash = calculation_hash(calc)
+    stp_row = fetch.stationary_point("InChI", inchi, calc_hash, db=db)
+    if stp_row is not None:
+        return stp_row
 
-    existing_identity: IdentityRow | None = fetch.identity(
-        algorithm="InChI", identifier=inchi_str, db=db
-    )
+    inp = program.prog_from_rows(calc, geo, CalcType.optimization)
+    res = qcop.compute(calc.program, inp)
 
-    if existing_identity:
-        for stp in existing_identity.stationary_points:
-            for hash_row in stp.calculation.hashes:
-                if hash_row.value == calc_hash:
-                    return stp.geometry.to_geom()
-
-    res = compute.stationary_point(geo, calc)
-
-    if not res.success or res.data.final_structure is None:  # ty:ignore[unresolved-attribute]
+    if not res.success or res.data.final_structure is None:
         msg = f"Calculation failed: {res.traceback}"
         raise RuntimeError(msg)
 
-    stp = write.stationary_point(res, db, order=order)
+    calc_row, geo_row = autostore.qc.results.res_to_rows(res)
+    val = res.data.final_energy
+    ene_row = write.energy(val, calc_row=calc_row, geo_row=geo_row, db=db)
 
-    return stp.geometry.to_geom()
+    return write.stationary_point(
+        order, ene_row=ene_row, calc_row=calc_row, geo_row=geo_row, db=db
+    )

@@ -10,10 +10,12 @@ automech-autostore = "==0.0.3"
 crest = ">=3.0.2"
 xtb = ">=6.7.1"
 libgfortran = ">=14,<15"
+ipykernel = ">=7.2.0,<8"
 
 [pypi-dependencies]
 qcio = "*"
 qcop = "*"
+prism-pruner = ">=0.1.0, <0.2"
 
 [package]
 name = "autopilot"

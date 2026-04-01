@@ -2,7 +2,6 @@
 
 __version__ = "0.0.0"
 
-from . import compute
-from .core import energy, initial_geometry
+from .core import conformer_search, energy, init_geom
 
-__all__ = ["compute", "energy", "initial_geometry"]
+__all__ = ["conformer_search", "energy", "init_geom"]
