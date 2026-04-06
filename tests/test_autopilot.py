@@ -6,6 +6,8 @@ import numpy as np
 import pytest
 from automol import Geometry
 from autostore import Calculation, Database
+from autostore.models import EnergyRow, GeometryRow, StationaryPointRow
+from sqlmodel import select
 
 import autopilot
 
@@ -32,16 +34,73 @@ def water() -> Geometry:
 @pytest.fixture
 def xtb_calculation() -> Calculation:
     """XTB calculation fixture."""
-    return Calculation(program="crest", method="gfn2")
+    return Calculation(program="crest", method="gfnff")
 
 
 def test_energy(
     water: Geometry, xtb_calculation: Calculation, database: Database
 ) -> None:
     """Test single-point energy calculation."""
-    energy = autopilot.energy(water, xtb_calculation, db=database)
-    assert np.isclose(energy, -5.062316802835694)
+    ene_ids = autopilot.energy(database, calc=xtb_calculation, geom=water)
+    ene_row = database.fetch(model=EnergyRow, row_id=ene_ids[0])
+    assert np.isclose(ene_row.value, -0.320207546368996)
 
-    # Test retrieval from database
-    energy = autopilot.energy(water, xtb_calculation, db=database)
-    assert np.isclose(energy, -5.062316802835694)
+    # Second attempt should yield existing ids
+    old_ene_ids = autopilot.energy(database, calc=xtb_calculation, geom=water)
+    assert old_ene_ids == ene_ids
+
+
+def test_initial_geometry(
+    water: Geometry, xtb_calculation: Calculation, database: Database
+) -> None:
+    """Test initial geometry optimization."""
+    stp_ids = autopilot.initial_geometry(database, calc=xtb_calculation, geom=water)
+    assert len(stp_ids) == 1
+    stp_id = stp_ids[0]
+    with database.session() as session:
+        statement = (
+            select(StationaryPointRow)
+            .join(StationaryPointRow.geometry)  # ty:ignore[invalid-argument-type]
+            .join(GeometryRow.energies)  # ty:ignore[invalid-argument-type]
+            .where(StationaryPointRow.id == stp_id)
+        )
+
+        stp_row = session.exec(statement).first()
+        # Assert corresponding StationaryPointRow exists
+        assert stp_row is not None
+        # Assert geometry has been optimized
+        assert water != stp_row.geometry
+        # Assert energy has been logged
+        assert len(stp_row.geometry.energies) > 0
+
+    # Second attempt should yield existing ids
+    old_stp_ids = autopilot.initial_geometry(database, calc=xtb_calculation, geom=water)
+    assert old_stp_ids == stp_ids
+
+
+def test_conformers(
+    water: Geometry, xtb_calculation: Calculation, database: Database
+) -> None:
+    """Test conformer search."""
+    stp_ids = autopilot.conformers(database, calc=xtb_calculation, geom=water)
+    assert len(stp_ids) == 1
+    stp_id = stp_ids[0]
+    with database.session() as session:
+        statement = (
+            select(StationaryPointRow)
+            .join(StationaryPointRow.geometry)  # ty:ignore[invalid-argument-type]
+            .join(GeometryRow.energies)  # ty:ignore[invalid-argument-type]
+            .where(StationaryPointRow.id == stp_id)
+        )
+
+        stp_row = session.exec(statement).first()
+        # Assert corresponding StationaryPointRow exists
+        assert stp_row is not None
+        # Assert geometry has been optimized
+        assert water != stp_row.geometry
+        # Assert energy has been logged
+        assert len(stp_row.geometry.energies) > 0
+
+    # Second attempt should yield existing ids
+    old_stp_ids = autopilot.conformers(database, calc=xtb_calculation, geom=water)
+    assert old_stp_ids == stp_ids

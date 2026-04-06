@@ -1,154 +1,265 @@
 """Core functions."""
 
-import autostore
 import qcop
-from automol import Geometry, geom
-from autostore import (
-    Calculation,
-    Database,
-    EnergyRow,
-    fetch,
-    write,
-)
-from autostore.calcn import calculation_hash
-from autostore.models import StationaryPointRow
-from autostore.qc import program, structure
+from automol import Geometry
+from autostore.calcn import Calculation
+from autostore.database import Database
+from autostore.models import CalculationRow, EnergyRow, GeometryRow, StationaryPointRow
+from autostore.qc import program, results, structure
 from qcio import CalcType
+from sqlmodel import select
 
 
-def conformer_search(
-    calc: Calculation, geo: Geometry, *, hash_name: str = "minimal", db: Database
-) -> None:
-    """
-    Conduct conformer search for given geometry.
+def energy(db: Database, *, calc: Calculation, geom: Geometry) -> list[int]:
+    """Compute energy.
 
     Parameters
     ----------
-    geo
-        Geometry.
-    calc
-        Calculation metadata.
-    hash_name
-        Calculation hash type.
     db
         Database connection manager.
+    calc
+        Calculation metadata.
+    geom
+        Geometry.
+    hash_name
+        Calculation hash type.
 
     Returns
     -------
-        test
+        List of EnergyRow ids.
 
     Raises
     ------
+    IndexError
+        If multiple GeometryRows correspond to input geo.
     RuntimeError
         If the calculation fails.
     """
-    inp = program.prog_from_rows(calc, geo, CalcType.conformer_search)
-    res = qcop.compute(calc.program, inp)
+    calc.calctype = CalcType.energy
+    # Get initial GeometryRow
+    input_geom_ids = db.query(model=GeometryRow, **geom.model_dump())
 
-    calc_row, _ = autostore.qc.results.res_to_rows(res)
+    if not input_geom_ids:
+        input_geom_id = db.write(row=GeometryRow(**geom.model_dump()))
 
-    for struc, ene in zip(
-        res.data.conformers, res.data.conformer_energies, strict=True
-    ):
-        geo_row = structure.struc_to_row(struc)
-        ene_row = write.energy(ene, calc_row=calc_row, geo_row=geo_row, db=db)
-        write.stationary_point(
-            1, ene_row=ene_row, calc_row=calc_row, geo_row=geo_row, db=db
-        )
+    elif len(input_geom_ids) > 1:  # can only yield one id due to hash uniqueness
+        msg = f"{geom = } not unique in {GeometryRow.__tablename__}."
+        raise IndexError(msg)
 
+    else:  # Query existing EnergyRow instances
+        input_geom_id = input_geom_ids[0]
 
-def energy(
-    calc: Calculation, geo: Geometry, *, hash_name: str = "minimal", db: Database
-) -> EnergyRow:
-    """
-    Compute energy.
+        with db.session() as session:
+            statement = (
+                select(EnergyRow)
+                .join(EnergyRow.calculation)  # ty:ignore[invalid-argument-type]
+                .join(CalculationRow.input_geometry)  # ty:ignore[invalid-argument-type]
+                .where(GeometryRow.id == input_geom_id)
+            )
 
-    Parameters
-    ----------
-    geo
-        Geometry.
-    calc
-        Calculation metadata.
-    hash_name
-        Calculation hash type.
-    db
-        Database connection manager.
+            calc_conditions = [
+                getattr(CalculationRow, key) == value
+                for key, value in calc.model_dump().items()
+                if value is not None
+            ]
 
-    Returns
-    -------
-        Energy in Hartree.
+            statement = statement.where(*calc_conditions)
+            matches = session.exec(statement).all()
 
-    Raises
-    ------
-    RuntimeError
-        If the calculation fails.
-    """
-    ene_row = fetch.energy(geo, calc, db=db, hash_name=hash_name)
-    if ene_row is not None:
-        return ene_row
+            if matches:
+                return [row.id for row in matches]  # ty:ignore[invalid-return-type]
 
-    inp = program.prog_from_rows(calc, geo, CalcType.energy)
+    # Compute results
+    inp = program.from_rows(calc, geom, CalcType.energy)
     res = qcop.compute(calc.program, inp)
 
     if not res.success or res.data.energy is None:
         msg = f"Calculation failed: {res.traceback}"
         raise RuntimeError(msg)
 
-    calc_row, geo_row = autostore.qc.results.res_to_rows(res)
-    val = res.data.energy
+    calc_row = results.calc_row(res)
+    calc_row.input_geometry_id = input_geom_id
+    calc_id = db.write(row=calc_row)  # ty:ignore[invalid-argument-type]
 
-    return write.energy(val, calc_row=calc_row, geo_row=geo_row, db=db)
+    # Use input geo id because structure does not change in energy calctype.
+    ene_row = EnergyRow(
+        geometry_id=input_geom_id, calculation_id=calc_id, value=res.data.energy
+    )
+
+    return [db.write(row=ene_row)]
 
 
-def init_geom(
-    calc: Calculation,
-    geo: Geometry,
-    order: int,
-    *,
-    hash_name: str = "minimal",
-    db: Database,
-) -> StationaryPointRow:
+def initial_geometry(db: Database, *, calc: Calculation, geom: Geometry) -> list[int]:
     """
     Compute stationary point initial geometry.
 
     Parameters
     ----------
-    geo
-        Geometry.
-    calc
-        Calculation metadata.
     db
         Database connection manager.
-    order
-        Order of the stationary point.
+    calc
+        Calculation metadata.
+    geom
+        Geometry.
 
     Returns
     -------
-        Initial geometry.
+        List of StationaryPointRow ids.
 
     Raises
     ------
     RuntimeError
         If the calculation fails.
     """
-    inchi = geom.geo_to_inchi(geo)
-    calc_hash = calculation_hash(calc, hash_name)
+    calc.calctype = CalcType.optimization
+    # Get initial GeometryRow
+    input_geom_ids = db.query(model=GeometryRow, **geom.model_dump())
 
-    stp_row = fetch.stationary_point("InChI", inchi, calc_hash, db=db)
-    if stp_row is not None:
-        return stp_row
+    if not input_geom_ids:
+        input_geom_id = db.write(row=GeometryRow(**geom.model_dump()))
 
-    inp = program.prog_from_rows(calc, geo, CalcType.optimization)
+    elif len(input_geom_ids) > 1:  # can only yield one id due to hash uniqueness
+        msg = f"{geom = } not unique in {GeometryRow.__tablename__}."
+        raise IndexError(msg)
+
+    else:  # Query existing EnergyRow instances
+        input_geom_id = input_geom_ids[0]
+
+        with db.session() as session:
+            statement = (
+                select(StationaryPointRow)
+                .join(StationaryPointRow.calculation)  # ty:ignore[invalid-argument-type]
+                .join(CalculationRow.input_geometry)  # ty:ignore[invalid-argument-type]
+                .where(GeometryRow.id == input_geom_id)
+            )
+
+            calc_conditions = [
+                getattr(CalculationRow, key) == value
+                for key, value in calc.model_dump().items()
+                if value is not None
+            ]
+
+            statement = statement.where(*calc_conditions)
+            matches = session.exec(statement).all()
+
+            if matches:
+                return [row.id for row in matches]  # ty:ignore[invalid-return-type]
+
+    # Compute results
+    inp = program.from_rows(calc, geom, CalcType.optimization)
     res = qcop.compute(calc.program, inp)
 
-    if not res.success or res.data.final_structure is None:
+    if not res.success or res.data.final_energy is None:
         msg = f"Calculation failed: {res.traceback}"
         raise RuntimeError(msg)
 
-    calc_row, geo_row = autostore.qc.results.res_to_rows(res)
-    val = res.data.final_energy
-    ene_row = write.energy(val, calc_row=calc_row, geo_row=geo_row, db=db)
+    calc_row = results.calc_row(res)
+    calc_row.input_geometry_id = input_geom_id
+    calc_id = db.write(row=calc_row)  # ty:ignore[invalid-argument-type]
 
-    return write.stationary_point(
-        order, ene_row=ene_row, calc_row=calc_row, geo_row=geo_row, db=db
+    final_geom_row = results.geom_row(res)
+    final_geom_id = db.write(row=final_geom_row)  # ty:ignore[invalid-argument-type]
+
+    # Use input geo id because structure does not change in energy calctype.
+    ene_row = EnergyRow(
+        geometry_id=final_geom_id, calculation_id=calc_id, value=res.data.final_energy
     )
+
+    db.write(row=ene_row)
+
+    stp_row = StationaryPointRow(
+        geometry_id=final_geom_id, calculation_id=calc_id, order=1
+    )
+
+    return [db.write(row=stp_row)]
+
+
+def conformers(db: Database, *, calc: Calculation, geom: Geometry) -> list[int]:
+    """
+    Compute stationary point initial geometry.
+
+    Parameters
+    ----------
+    db
+        Database connection manager.
+    calc
+        Calculation metadata.
+    geom
+        Geometry.
+
+    Returns
+    -------
+        List of StationaryPointRow ids.
+
+    Raises
+    ------
+    RuntimeError
+        If the calculation fails.
+    """
+    calc.calctype = CalcType.conformer_search
+    # Get initial GeometryRow
+    input_geom_ids = db.query(model=GeometryRow, **geom.model_dump())
+
+    if not input_geom_ids:
+        input_geom_id = db.write(row=GeometryRow(**geom.model_dump()))
+
+    elif len(input_geom_ids) > 1:  # can only yield one id due to hash uniqueness
+        msg = f"{geom = } not unique in {GeometryRow.__tablename__}."
+        raise IndexError(msg)
+
+    else:  # Query existing EnergyRow instances
+        input_geom_id = input_geom_ids[0]
+
+        with db.session() as session:
+            statement = (
+                select(StationaryPointRow)
+                .join(StationaryPointRow.calculation)  # ty:ignore[invalid-argument-type]
+                .join(CalculationRow.input_geometry)  # ty:ignore[invalid-argument-type]
+                .where(GeometryRow.id == input_geom_id)
+            )
+
+            calc_conditions = [
+                getattr(CalculationRow, key) == value
+                for key, value in calc.model_dump().items()
+                if value is not None
+            ]
+
+            statement = statement.where(*calc_conditions)
+            matches = session.exec(statement).all()
+
+            if matches:
+                return [row.id for row in matches]  # ty:ignore[invalid-return-type]
+
+    # Compute results
+    inp = program.from_rows(calc, geom, CalcType.conformer_search)
+    if calc.superprogram:
+        res = qcop.compute(calc.superprogram, inp)
+    else:
+        res = qcop.compute(calc.program, inp)
+
+    if not res.success or res.data.conformers is None:
+        msg = f"Calculation failed: {res.traceback}"
+        raise RuntimeError(msg)
+
+    calc_row = results.calc_row(res)
+    calc_row.input_geometry_id = input_geom_id
+    calc_id = db.write(row=calc_row)  # ty:ignore[invalid-argument-type]
+
+    stp_ids = []
+    for struc, ene in zip(
+        res.data.conformers, res.data.conformer_energies, strict=True
+    ):
+        conf_geom = structure.geom_row(struc)
+        conf_geom_id = db.write(row=conf_geom)  # ty:ignore[invalid-argument-type]
+
+        ene_row = EnergyRow(geometry_id=conf_geom_id, calculation_id=calc_id, value=ene)
+
+        db.write(row=ene_row)
+
+        stp_row = StationaryPointRow(
+            geometry_id=conf_geom_id, calculation_id=calc_id, order=1
+        )
+
+        stp_ids.append(db.write(row=stp_row))
+
+    return stp_ids

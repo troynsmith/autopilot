@@ -5,8 +5,8 @@ preview = ["pixi-build"]
 
 [dependencies]
 autopilot = { path = "." }
-automol = "==0.0.5"
-automech-autostore = "==0.0.3"
+automol = "==0.0.6"
+automech-autostore = "==0.0.4"
 crest = ">=3.0.2"
 xtb = ">=6.7.1"
 libgfortran = ">=14,<15"
@@ -49,10 +49,12 @@ sphinx-autodoc2 = "*"
 [feature.local.pypi-dependencies]
 automol = { path = "../automol", editable = true }
 automech-autostore = { path = "../autostore", editable = true }
+prism-pruner = { path = "../prism_pruner", editable = true }
 
 [feature.local.pypi-options.dependency-overrides]
 automol = { path = "../automol", editable = true }
 automech-autostore = { path = "../autostore", editable = true }
+prism-pruner = { path = "../prism_pruner", editable = true }
 
 [environments]
 default = { solve-group = "default" }
