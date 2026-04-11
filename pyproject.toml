@@ -4,12 +4,12 @@ version = "0.0.0"
 authors = [{name = "Andreas V. Copan", email = "avcopan@uga.edu"}]
 requires-python = ">= 3.12"
 dependencies = [
-    "automol==0.0.6",
-    "automech-autostore==0.0.4",
+    "automol==0.0.7",
+    "automech-autostore==0.0.5",
     "geometric>=1.1",
     "prism_pruner>=0.1.0",
-    "qcio>=0.16.2",
-    "qcop>=0.12.1",
+    "qcdata>=0.17.0",
+    "qccompute>=0.13.0",
 ]
 
 [build-system]
