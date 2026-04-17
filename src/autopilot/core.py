@@ -7,8 +7,8 @@ from autostore import (
     CalculationRow,
     Database,
     EnergyRow,
-    StationaryPointRow,
     StageRow,
+    StationaryPointRow,
     StationaryStageLink,
     StepRow,
 )
@@ -87,7 +87,8 @@ def run(db: Database, *, calc: Calculation, geo: Geometry) -> RowID:
                 db, calc_id=calc_id, struc=conf, ene=ene, order=0, is_pseudo=False
             )
 
-    elif calc.calctype == CalcType.transition_state:
+    elif calc.calctype == CalcType.scan:
+        raise ValueError(prog_out)
         traj = prog_out.data.extras["trajectory"]
         stp1 = write_stationary(
             db,

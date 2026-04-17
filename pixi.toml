@@ -50,11 +50,13 @@ sphinx-autodoc2 = "*"
 automol = { path = "../automol", editable = true }
 automech-autostore = { path = "../autostore", editable = true }
 prism-pruner = { path = "../prism_pruner", editable = true }
+qcdata = { path = "../qcdata", editable = true }
 
 [feature.local.pypi-options.dependency-overrides]
 automol = { path = "../automol", editable = true }
 automech-autostore = { path = "../autostore", editable = true }
 prism-pruner = { path = "../prism_pruner", editable = true }
+qcdata = { path = "../qcdata", editable = true }
 
 [environments]
 default = { solve-group = "default" }

@@ -1438,13 +1438,13 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/d8/aa/d95279e7a0edcea470ee3ccf964a089c7a96b0d266a0730a3504e99a7d93/qccodec-0.10.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/ee/2e/08e9874d1f6adcf103444a2e05aee7d44551864689c61c6f09fa1d4f3291/qccompute-0.13.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/93/d7/f12f520a35d8ff5cd647d37627bcf1be98f701c4ab69b520164214ba7e77/qcconst-0.2.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/3b/5f/8084b103f8ccecb0fa2437a862c01d1c6c8744b70daa607bc8cd6f31e27f/qcdata-0.17.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/44/6f/7120676b6d73228c96e17f1f794d8ab046fc910d781c8d151120c3f1569e/toml-0.10.2-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/c7/18/c86eb8e0202e32dd3df50d43d7ff9854f8e0603945ff398974c1d91ac1ef/tomli_w-1.2.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/16/e1/3079a9ff9b8e11b846c6ac5c8b5bfb7ff225eee721825310c91b3b50304f/tqdm-4.67.3-py3-none-any.whl
       - pypi: ../automol
       - pypi: ../autostore
       - pypi: ../prism_pruner
+      - pypi: ../qcdata
       osx-64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/_python_abi3_support-1.0-hd8ed1ab_2.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/accessible-pygments-0.0.5-pyhd8ed1ab_1.conda
@@ -1663,13 +1663,13 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/d8/aa/d95279e7a0edcea470ee3ccf964a089c7a96b0d266a0730a3504e99a7d93/qccodec-0.10.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/ee/2e/08e9874d1f6adcf103444a2e05aee7d44551864689c61c6f09fa1d4f3291/qccompute-0.13.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/93/d7/f12f520a35d8ff5cd647d37627bcf1be98f701c4ab69b520164214ba7e77/qcconst-0.2.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/3b/5f/8084b103f8ccecb0fa2437a862c01d1c6c8744b70daa607bc8cd6f31e27f/qcdata-0.17.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/44/6f/7120676b6d73228c96e17f1f794d8ab046fc910d781c8d151120c3f1569e/toml-0.10.2-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/c7/18/c86eb8e0202e32dd3df50d43d7ff9854f8e0603945ff398974c1d91ac1ef/tomli_w-1.2.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/16/e1/3079a9ff9b8e11b846c6ac5c8b5bfb7ff225eee721825310c91b3b50304f/tqdm-4.67.3-py3-none-any.whl
       - pypi: ../automol
       - pypi: ../autostore
       - pypi: ../prism_pruner
+      - pypi: ../qcdata
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/_python_abi3_support-1.0-hd8ed1ab_2.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/accessible-pygments-0.0.5-pyhd8ed1ab_1.conda
@@ -1888,13 +1888,13 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/d8/aa/d95279e7a0edcea470ee3ccf964a089c7a96b0d266a0730a3504e99a7d93/qccodec-0.10.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/ee/2e/08e9874d1f6adcf103444a2e05aee7d44551864689c61c6f09fa1d4f3291/qccompute-0.13.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/93/d7/f12f520a35d8ff5cd647d37627bcf1be98f701c4ab69b520164214ba7e77/qcconst-0.2.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/3b/5f/8084b103f8ccecb0fa2437a862c01d1c6c8744b70daa607bc8cd6f31e27f/qcdata-0.17.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/44/6f/7120676b6d73228c96e17f1f794d8ab046fc910d781c8d151120c3f1569e/toml-0.10.2-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/c7/18/c86eb8e0202e32dd3df50d43d7ff9854f8e0603945ff398974c1d91ac1ef/tomli_w-1.2.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/16/e1/3079a9ff9b8e11b846c6ac5c8b5bfb7ff225eee721825310c91b3b50304f/tqdm-4.67.3-py3-none-any.whl
       - pypi: ../automol
       - pypi: ../autostore
       - pypi: ../prism_pruner
+      - pypi: ../qcdata
 packages:
 - conda: https://conda.anaconda.org/conda-forge/linux-64/_libgcc_mutex-0.1-conda_forge.tar.bz2
   sha256: fe51de6107f9edc7aa4f786a70f4a883943bc9d39b3bb7307c04c41410990726
@@ -2046,8 +2046,8 @@ packages:
   timestamp: 1775748782610
 - pypi: ../automol
   name: automol
-  version: 0.0.7
-  sha256: ecac602db56dc159b56914acc29c79f70f8a6a51ad84a56d3be375ec390d5b7f
+  version: 0.0.8
+  sha256: c8eea872ad5aaf8d2f361f4eddac0306caa1a61bcb5e74a32eb5fb21338137c7
   requires_dist:
   - networkx>=3.3
   - numpy>=2.0
@@ -6405,6 +6405,29 @@ packages:
   version: 0.2.1
   sha256: 2c1489e60909ac03daa448a06b59705376be6d71d6d0cee1caecde5517559206
   requires_python: '>=3.9'
+- pypi: ../qcdata
+  name: qcdata
+  version: 0.17.0
+  sha256: 1599b90e8c30bff9fb25deaab2d9693a6b0a2633ec01feddb816f15fc38f28b7
+  requires_dist:
+  - pydantic>=2.0.0,!=2.0.1,!=2.1.0
+  - numpy>=1.20
+  - toml>=0.10.2
+  - pyyaml>=6.0
+  - typing-extensions>=4.7.1
+  - eval-type-backport>=0.2.0
+  - qcconst>=0.2.1
+  - matplotlib>=3.0.0 ; extra == 'view'
+  - ipython>=8.0.0 ; extra == 'view'
+  - py3dmol>=2.2.1 ; extra == 'view'
+  - rdkit>=2022.3.3 ; extra == 'view'
+  - qcinf>=0.1.1 ; extra == 'view'
+  - matplotlib>=3.0.0 ; extra == 'all'
+  - ipython>=8.0.0 ; extra == 'all'
+  - py3dmol>=2.2.1 ; extra == 'all'
+  - rdkit>=2022.3.3 ; extra == 'all'
+  - qcinf>=0.1.1 ; extra == 'all'
+  requires_python: '>=3.10'
 - pypi: https://files.pythonhosted.org/packages/3b/5f/8084b103f8ccecb0fa2437a862c01d1c6c8744b70daa607bc8cd6f31e27f/qcdata-0.17.0-py3-none-any.whl
   name: qcdata
   version: 0.17.0

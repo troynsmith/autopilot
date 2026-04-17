@@ -3,19 +3,18 @@
 import json
 from collections.abc import Callable
 
-import numpy as np
 from automol import geom
 from qccompute import compute
 from qccompute.adapters.base import ProgramAdapter
-from qcdata import CalcType, ProgramInput, SinglePointResults
+from qcdata import CalcType, ProgramInput, ScanData
 
 from ..struc import from_geometry, geometry
 
 
-class ScanAdapter(ProgramAdapter[ProgramInput, SinglePointResults]):
+class ScanAdapter(ProgramAdapter[ProgramInput, ScanData]):
     """Adapter for relaxed scan with geomeTRIC."""
 
-    supported_calctypes = [CalcType.transition_state]  # noqa: RUF012
+    supported_calctypes = [CalcType.scan]  # noqa: RUF012
     program = "geometric_scan"
 
     def program_version(self, stdout: str | None) -> str:  # noqa: ARG002
@@ -28,7 +27,7 @@ class ScanAdapter(ProgramAdapter[ProgramInput, SinglePointResults]):
         update_func: Callable | None = None,  # noqa: ARG002
         update_interval: float | None = None,  # noqa: ARG002
         **kwargs,  # noqa: ANN003, ARG002
-    ) -> tuple[SinglePointResults, str]:
+    ) -> tuple[ScanData, str]:
         """Perform relaxed scan with geomeTRIC."""
         # Perform the calculation and return the results and stdout
         scan_params = input_data.keywords.get("scan_params")
@@ -47,8 +46,7 @@ class ScanAdapter(ProgramAdapter[ProgramInput, SinglePointResults]):
         vals = _convert_list(scan_params.get("scan_values"))
 
         current_geo = geometry(input_data.structure)
-        path_outputs = []
-        trajectory = {"path_values": [], "path_energies": [], "path_structures": []}
+        trajectory = []
         log = ""
 
         for i, val in enumerate(vals):
@@ -71,34 +69,9 @@ class ScanAdapter(ProgramAdapter[ProgramInput, SinglePointResults]):
             )
 
             output = compute("geometric", step_inp)
-
+            trajectory.append(output)
             current_geo = geometry(output.data.final_structure)
-
-            path_outputs.append(output.data)
-
-            trajectory["path_values"].append(val)
-            trajectory["path_energies"].append(output.data.final_energy)
-            trajectory["path_structures"].append(output.data.final_structure)
 
             log += f"\n--- Scan Point {i}: {val} ---\n{output.logs}"
 
-        maximum = max(path_outputs, key=lambda x: x.final_energy)
-
-        if np.allclose(
-            trajectory["path_structures"][0].geometry, maximum.final_structure.geometry
-        ) or np.allclose(
-            trajectory["path_structures"][-1].geometry, maximum.final_structure.geometry
-        ):
-            msg = f"Highest energy with {scan_params = } was the first or last point."
-            raise RuntimeError(msg)
-
-        ts_inp = input_data.model_copy(update={"calctype": CalcType.transition_state})
-
-        output = compute("geometric", ts_inp)
-
-        output.data.extras["trajectory"] = trajectory
-        output.data.extras["scan_maximum"] = max(
-            path_outputs, key=lambda x: x.final_energy
-        )
-
-        return output.data, log
+        return ScanData(values=vals, trajectory=trajectory), log
