@@ -7,7 +7,6 @@ dependencies = [
     "automol==0.0.7",
     "automech-autostore==0.0.5",
     "geometric>=1.1",
-    "prism_pruner>=0.1.0",
     "qcdata>=0.17.0",
     "qccompute>=0.13.0",
 ]

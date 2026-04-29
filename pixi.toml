@@ -13,7 +13,6 @@ libgfortran = ">=14,<15"
 ipykernel = ">=7.2.0,<8"
 
 [pypi-dependencies]
-prism-pruner = ">=0.1.0, <0.2"
 qcdata = ">=0.17.0, <0.18"
 qccompute = ">=0.13.0, <0.14"
 
@@ -31,7 +30,7 @@ ignore-pypi-mapping = false
 [feature.dev.dependencies]
 uv = "*"
 ruff = "*"
-ty = "==0.0.28"
+ty = "==0.0.31"
 import-linter = "*"
 pytest = "*"
 pytest-cov = "*"
@@ -49,14 +48,10 @@ sphinx-autodoc2 = "*"
 [feature.local.pypi-dependencies]
 automol = { path = "../automol", editable = true }
 automech-autostore = { path = "../autostore", editable = true }
-prism-pruner = { path = "../prism_pruner", editable = true }
-qcdata = { path = "../qcdata", editable = true }
 
 [feature.local.pypi-options.dependency-overrides]
 automol = { path = "../automol", editable = true }
 automech-autostore = { path = "../autostore", editable = true }
-prism-pruner = { path = "../prism_pruner", editable = true }
-qcdata = { path = "../qcdata", editable = true }
 
 [environments]
 default = { solve-group = "default" }
@@ -92,6 +87,9 @@ release = "tbump"
 # Setup and initialize this repository (only run once)
 setup = "./scripts/setup.sh"
 init = { cmd = "./scripts/init.sh", depends-on = ["setup"]}
+
+[feature.dev.pypi-dependencies]
+qcdata = { version = ">=0.17.0, <0.18", extras = ["view"] }
 
 [feature.local.tasks]
 test-automol = "pytest ../automol/tests"

@@ -24,7 +24,9 @@ class ScanParameters(BaseModel):
 
     scan_type: ScanType
     scan_indices: Sequence[int]
-    scan_values: npt.NDArray[np.float32] | Sequence[float | str]
+    scan_values: npt.NDArray[np.float64] | Sequence[float | str]
+
+    end_at_max: bool = False
 
     @model_validator(mode="after")
     def validate_indices_length(self) -> "ScanParameters":

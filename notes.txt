@@ -1,0 +1,10 @@
+Ultimately, the idea is at the very high level in Automech (after finishing AutoPilot):
+
+* Starting point is a list of reactions (A + B -> C) with species table matching names to smiles
+* List of keywords for each reaction which calls AutoPilot for different steps:
+    1. Map the reaction and convert into a graph
+    2. Mapping stereochemistry (ignore for now)
+    3. At the user API level, every operation is performed on a graph
+
+Wrap up / close the scanning loop -> will come back to later but focus exclusively on double-ended after pushing an initial implementation.
+

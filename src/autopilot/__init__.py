@@ -2,6 +2,6 @@
 
 __version__ = "0.0.0"
 
-from .core import run
+from . import routines, run
 
-__all__ = ["run"]
+__all__ = ["routines", "run"]
